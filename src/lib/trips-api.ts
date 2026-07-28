@@ -45,6 +45,37 @@ export async function deleteTrip(tripId: string): Promise<void> {
   }
 }
 
+export async function listSharedTrips(userId: string): Promise<Trip[]> {
+  const result = await supabase
+    .from('trips')
+    .select('*')
+    .contains('shared_with', [userId])
+    .order('created_at', { ascending: false });
+  return unwrap(result) ?? [];
+}
+
+export type SharedProfile = {
+  id: string;
+  email: string;
+  display_name: string | null;
+};
+
+export async function getProfilesByIds(ids: string[]): Promise<SharedProfile[]> {
+  if (ids.length === 0) {
+    return [];
+  }
+  const result = await supabase.from('profiles').select('id, email, display_name').in('id', ids);
+  return unwrap(result) ?? [];
+}
+
+export async function findUserIdByEmail(email: string): Promise<string | null> {
+  const { data, error } = await supabase.rpc('find_user_id_by_email', { lookup_email: email });
+  if (error) {
+    throw new Error(error.message);
+  }
+  return data;
+}
+
 export async function listTravelers(tripId: string): Promise<TripTraveler[]> {
   const result = await supabase
     .from('trip_travelers')

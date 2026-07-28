@@ -43,6 +43,7 @@ export function TripsNavigator({ ownerId }: Props) {
       {view.name === 'trip-detail' && (
         <TripDetailScreen
           tripId={view.tripId}
+          currentUserId={ownerId}
           onBack={() => setView({ name: 'list' })}
           onEditTrip={() => setView({ name: 'trip-form', tripId: view.tripId })}
           onAddLeg={() => setView({ name: 'leg-form', tripId: view.tripId })}

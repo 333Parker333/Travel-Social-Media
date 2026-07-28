@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
 
-import { listTrips } from '../../lib/trips-api';
+import { listSharedTrips, listTrips } from '../../lib/trips-api';
 import type { Trip } from '../../types/trip';
 
 type Props = {
@@ -10,20 +10,30 @@ type Props = {
   onCreateTrip: () => void;
 };
 
+type Section = { title: string; data: Trip[] };
+
 export function TripsListScreen({ ownerId, onOpenTrip, onCreateTrip }: Props) {
-  const [trips, setTrips] = useState<Trip[] | null>(null);
+  const [sections, setSections] = useState<Section[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    listTrips(ownerId)
-      .then(setTrips)
+    Promise.all([listTrips(ownerId), listSharedTrips(ownerId)])
+      .then(([owned, shared]) => {
+        const next: Section[] = [{ title: 'Your trips', data: owned }];
+        if (shared.length > 0) {
+          next.push({ title: 'Shared with you', data: shared });
+        }
+        setSections(next);
+      })
       .catch((err: Error) => setError(err.message));
   }, [ownerId]);
+
+  const isEmpty = sections ? sections.every((section) => section.data.length === 0) : false;
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Your trips</Text>
+        <Text style={styles.title}>Trips</Text>
         <Pressable style={styles.newButton} onPress={onCreateTrip}>
           <Text style={styles.newButtonText}>+ New trip</Text>
         </Pressable>
@@ -31,16 +41,17 @@ export function TripsListScreen({ ownerId, onOpenTrip, onCreateTrip }: Props) {
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      {!trips && !error ? <ActivityIndicator style={styles.spinner} /> : null}
+      {!sections && !error ? <ActivityIndicator style={styles.spinner} /> : null}
 
-      {trips && trips.length === 0 ? (
-        <Text style={styles.empty}>No trips yet. Tap &quot;New trip&quot; to create one.</Text>
-      ) : null}
+      {isEmpty ? <Text style={styles.empty}>No trips yet. Tap &quot;New trip&quot; to create one.</Text> : null}
 
-      {trips ? (
-        <FlatList
-          data={trips}
+      {sections ? (
+        <SectionList
+          sections={sections}
           keyExtractor={(trip) => trip.id}
+          renderSectionHeader={({ section }) =>
+            section.data.length > 0 ? <Text style={styles.sectionHeader}>{section.title}</Text> : null
+          }
           renderItem={({ item }) => (
             <Pressable style={styles.row} onPress={() => onOpenTrip(item.id)}>
               <Text style={styles.rowTitle}>{item.title}</Text>
@@ -92,6 +103,15 @@ const styles = StyleSheet.create({
   error: {
     color: '#d32f2f',
     marginBottom: 8,
+  },
+  sectionHeader: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#888',
+    textTransform: 'uppercase',
+    backgroundColor: '#fff',
+    paddingTop: 16,
+    paddingBottom: 6,
   },
   row: {
     paddingVertical: 12,

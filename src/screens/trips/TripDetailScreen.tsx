@@ -13,17 +13,22 @@ import {
 import {
   addTraveler,
   deleteLeg,
+  findUserIdByEmail,
+  getProfilesByIds,
   getTrip,
   listLegs,
   listTravelers,
   removeTraveler,
   swapLegPositions,
+  updateTrip,
 } from '../../lib/trips-api';
+import type { SharedProfile } from '../../lib/trips-api';
 import { partitionLegs } from '../../lib/trip-deck';
 import type { Trip, TripLeg, TripTraveler } from '../../types/trip';
 
 type Props = {
   tripId: string;
+  currentUserId: string;
   onBack: () => void;
   onEditTrip: () => void;
   onAddLeg: () => void;
@@ -48,11 +53,22 @@ function legPrimaryLabel(leg: TripLeg): string {
   return details.category || details.address || 'Untitled';
 }
 
-export function TripDetailScreen({ tripId, onBack, onEditTrip, onAddLeg, onEditLeg, onViewDeck }: Props) {
+export function TripDetailScreen({
+  tripId,
+  currentUserId,
+  onBack,
+  onEditTrip,
+  onAddLeg,
+  onEditLeg,
+  onViewDeck,
+}: Props) {
   const [trip, setTrip] = useState<Trip | null>(null);
   const [travelers, setTravelers] = useState<TripTraveler[]>([]);
   const [legs, setLegs] = useState<TripLeg[]>([]);
+  const [sharedProfiles, setSharedProfiles] = useState<SharedProfile[]>([]);
   const [newTraveler, setNewTraveler] = useState('');
+  const [shareEmail, setShareEmail] = useState('');
+  const [sharing, setSharing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(() => {
@@ -61,13 +77,53 @@ export function TripDetailScreen({ tripId, onBack, onEditTrip, onAddLeg, onEditL
         setTrip(tripData);
         setTravelers(travelerData);
         setLegs(legData);
+        return tripData.shared_with.length > 0 ? getProfilesByIds(tripData.shared_with) : [];
       })
+      .then(setSharedProfiles)
       .catch((err: Error) => setError(err.message));
   }, [tripId]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  const isOwner = trip?.owner === currentUserId;
+
+  const handleShare = async () => {
+    if (!trip || !shareEmail.trim()) {
+      return;
+    }
+    setSharing(true);
+    setError(null);
+    try {
+      const userId = await findUserIdByEmail(shareEmail.trim());
+      if (!userId) {
+        throw new Error('No account found with that email.');
+      }
+      if (userId === trip.owner) {
+        throw new Error("That's already the trip owner.");
+      }
+      if (trip.shared_with.includes(userId)) {
+        throw new Error('Already shared with that person.');
+      }
+      await updateTrip(tripId, { shared_with: [...trip.shared_with, userId] });
+      setShareEmail('');
+      load();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setSharing(false);
+    }
+  };
+
+  const handleUnshare = (userId: string) => {
+    if (!trip) {
+      return;
+    }
+    updateTrip(tripId, { shared_with: trip.shared_with.filter((id) => id !== userId) })
+      .then(load)
+      .catch((err: Error) => setError(err.message));
+  };
 
   const handleAddTraveler = async () => {
     if (!newTraveler.trim()) {
@@ -124,10 +180,14 @@ export function TripDetailScreen({ tripId, onBack, onEditTrip, onAddLeg, onEditL
 
       <View style={styles.titleRow}>
         <Text style={styles.title}>{trip.title}</Text>
-        <Pressable onPress={onEditTrip}>
-          <Text style={styles.link}>Edit</Text>
-        </Pressable>
+        {isOwner ? (
+          <Pressable onPress={onEditTrip}>
+            <Text style={styles.link}>Edit</Text>
+          </Pressable>
+        ) : null}
       </View>
+
+      {!isOwner ? <Text style={styles.sharedBadge}>Shared with you</Text> : null}
 
       <Text style={styles.meta}>
         {trip.status} · {trip.destinations.join(', ') || 'No destinations yet'}
@@ -143,39 +203,80 @@ export function TripDetailScreen({ tripId, onBack, onEditTrip, onAddLeg, onEditL
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
+      {isOwner ? (
+        <>
+          <Text style={styles.sectionTitle}>Shared with</Text>
+          {sharedProfiles.length === 0 ? <Text style={styles.empty}>Not shared with anyone yet.</Text> : null}
+          <View style={styles.chipRow}>
+            {sharedProfiles.map((profile) => (
+              <Pressable
+                key={profile.id}
+                style={styles.chip}
+                onLongPress={() => handleUnshare(profile.id)}
+              >
+                <Text style={styles.chipText}>{profile.display_name || profile.email}</Text>
+              </Pressable>
+            ))}
+          </View>
+          <View style={styles.addTravelerRow}>
+            <TextInput
+              style={styles.travelerInput}
+              value={shareEmail}
+              onChangeText={setShareEmail}
+              placeholder="Friend's email"
+              autoCapitalize="none"
+              keyboardType="email-address"
+              onSubmitEditing={handleShare}
+            />
+            <Pressable style={styles.addButton} onPress={handleShare} disabled={sharing}>
+              <Text style={styles.addButtonText}>{sharing ? '...' : 'Share'}</Text>
+            </Pressable>
+          </View>
+          <Text style={styles.wishlistHint}>Long-press a chip to remove their access.</Text>
+        </>
+      ) : null}
+
       <Text style={styles.sectionTitle}>Travelers</Text>
       <View style={styles.chipRow}>
         {travelers.map((traveler) => (
-          <Pressable key={traveler.id} style={styles.chip} onLongPress={() => handleRemoveTraveler(traveler.id)}>
+          <Pressable
+            key={traveler.id}
+            style={styles.chip}
+            onLongPress={isOwner ? () => handleRemoveTraveler(traveler.id) : undefined}
+          >
             <Text style={styles.chipText}>{traveler.display_name}</Text>
           </Pressable>
         ))}
       </View>
-      <View style={styles.addTravelerRow}>
-        <TextInput
-          style={styles.travelerInput}
-          value={newTraveler}
-          onChangeText={setNewTraveler}
-          placeholder="Add traveler name"
-          onSubmitEditing={handleAddTraveler}
-        />
-        <Pressable style={styles.addButton} onPress={handleAddTraveler}>
-          <Text style={styles.addButtonText}>Add</Text>
-        </Pressable>
-      </View>
+      {isOwner ? (
+        <View style={styles.addTravelerRow}>
+          <TextInput
+            style={styles.travelerInput}
+            value={newTraveler}
+            onChangeText={setNewTraveler}
+            placeholder="Add traveler name"
+            onSubmitEditing={handleAddTraveler}
+          />
+          <Pressable style={styles.addButton} onPress={handleAddTraveler}>
+            <Text style={styles.addButtonText}>Add</Text>
+          </Pressable>
+        </View>
+      ) : null}
 
       <View style={styles.legsHeader}>
         <Text style={styles.sectionTitle}>Legs</Text>
-        <Pressable style={styles.addButton} onPress={onAddLeg}>
-          <Text style={styles.addButtonText}>+ Add leg</Text>
-        </Pressable>
+        {isOwner ? (
+          <Pressable style={styles.addButton} onPress={onAddLeg}>
+            <Text style={styles.addButtonText}>+ Add leg</Text>
+          </Pressable>
+        ) : null}
       </View>
 
       {scheduled.length === 0 ? <Text style={styles.empty}>No legs yet.</Text> : null}
 
       {scheduled.map((leg, index) => (
         <View key={leg.id} style={styles.legRow}>
-          <Pressable style={styles.legMain} onPress={() => onEditLeg(leg.id)}>
+          <Pressable style={styles.legMain} onPress={isOwner ? () => onEditLeg(leg.id) : undefined}>
             <Text style={styles.legType}>{LEG_LABEL[leg.type]}</Text>
             <Text style={styles.legDetail}>{legPrimaryLabel(leg)}</Text>
             <Text style={styles.legMeta}>
@@ -183,17 +284,19 @@ export function TripDetailScreen({ tripId, onBack, onEditTrip, onAddLeg, onEditL
               {leg.cost.toFixed(2)}
             </Text>
           </Pressable>
-          <View style={styles.legActions}>
-            <Pressable onPress={() => moveLeg(index, -1)} disabled={index === 0}>
-              <Text style={[styles.reorder, index === 0 && styles.reorderDisabled]}>↑</Text>
-            </Pressable>
-            <Pressable onPress={() => moveLeg(index, 1)} disabled={index === scheduled.length - 1}>
-              <Text style={[styles.reorder, index === scheduled.length - 1 && styles.reorderDisabled]}>↓</Text>
-            </Pressable>
-            <Pressable onPress={() => handleDeleteLeg(leg)}>
-              <Text style={styles.delete}>✕</Text>
-            </Pressable>
-          </View>
+          {isOwner ? (
+            <View style={styles.legActions}>
+              <Pressable onPress={() => moveLeg(index, -1)} disabled={index === 0}>
+                <Text style={[styles.reorder, index === 0 && styles.reorderDisabled]}>↑</Text>
+              </Pressable>
+              <Pressable onPress={() => moveLeg(index, 1)} disabled={index === scheduled.length - 1}>
+                <Text style={[styles.reorder, index === scheduled.length - 1 && styles.reorderDisabled]}>↓</Text>
+              </Pressable>
+              <Pressable onPress={() => handleDeleteLeg(leg)}>
+                <Text style={styles.delete}>✕</Text>
+              </Pressable>
+            </View>
+          ) : null}
         </View>
       ))}
 
@@ -205,14 +308,16 @@ export function TripDetailScreen({ tripId, onBack, onEditTrip, onAddLeg, onEditL
           </Text>
           {wishlist.map((leg) => (
             <View key={leg.id} style={styles.legRow}>
-              <Pressable style={styles.legMain} onPress={() => onEditLeg(leg.id)}>
+              <Pressable style={styles.legMain} onPress={isOwner ? () => onEditLeg(leg.id) : undefined}>
                 <Text style={styles.legType}>{LEG_LABEL[leg.type]}</Text>
                 <Text style={styles.legDetail}>{legPrimaryLabel(leg)}</Text>
                 <Text style={styles.legMeta}>${leg.cost.toFixed(2)}</Text>
               </Pressable>
-              <Pressable onPress={() => handleDeleteLeg(leg)}>
-                <Text style={styles.delete}>✕</Text>
-              </Pressable>
+              {isOwner ? (
+                <Pressable onPress={() => handleDeleteLeg(leg)}>
+                  <Text style={styles.delete}>✕</Text>
+                </Pressable>
+              ) : null}
             </View>
           ))}
         </>
@@ -249,6 +354,12 @@ const styles = StyleSheet.create({
   link: {
     color: '#1a73e8',
     fontSize: 14,
+  },
+  sharedBadge: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#1a73e8',
+    marginTop: 4,
   },
   meta: {
     color: '#666',

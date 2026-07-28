@@ -1,4 +1,4 @@
-import type { LegType, TripLeg, TripTraveler } from '../types/trip';
+import type { LegType, Trip, TripLeg, TripTraveler } from '../types/trip';
 
 export const LEG_TYPE_LABEL: Record<LegType, string> = {
   flight: 'Flight',
@@ -113,4 +113,16 @@ export function tripDateRange(startDate: string | null, endDate: string | null):
     return `${format(startDate)} – ${format(endDate)}`;
   }
   return format(startDate ?? endDate!);
+}
+
+export function buildShareText(trip: Trip, legs: TripLeg[]): string {
+  const lines = [trip.title, tripDateRange(trip.start_date, trip.end_date)];
+
+  if (trip.destinations.length > 0) {
+    lines.push(trip.destinations.join(', '));
+  }
+
+  lines.push('', `${legs.length} leg${legs.length === 1 ? '' : 's'} planned · $${trip.total_cost.toFixed(2)} total`);
+
+  return lines.join('\n');
 }

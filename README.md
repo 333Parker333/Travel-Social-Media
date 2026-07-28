@@ -32,6 +32,11 @@ order (Supabase dashboard > SQL Editor, paste and run each file):
   Run this one by itself (not pasted into a script with other
   statements) — Postgres doesn't allow a new enum value to be used in the
   same transaction that added it.
+- `0004_sharing.sql` — a `find_user_id_by_email` RPC (security definer,
+  execute granted to `authenticated` only) so a trip owner can resolve a
+  friend's email to their user id without being able to browse the
+  `profiles` table, plus an RLS policy letting a trip owner view the
+  profiles of people they've shared a trip with.
 
 ## Running
 
@@ -65,6 +70,17 @@ type), and Master schedule (dense table of every leg). The route card is
 a simplified list rather than a real map for now — swapping in
 `react-native-maps` is a natural follow-up once a Google Maps API key is
 available for Android.
+
+**Sharing.** The trip owner can add a friend by email from the trip's
+detail screen ("Shared with" section) — they need an existing account;
+long-press their chip to remove access. Shared trips show up under
+"Shared with you" on the trips list for the person they were shared
+with, and open read-only (no edit/reorder/delete/add controls — those
+require RLS write access, which only the owner has). From the Trip Deck,
+"Share" opens the native OS share sheet with a plain-text trip summary —
+works for messaging apps, notes, etc.; a richer image export (for
+Instagram/TikTok Stories specifically) would need `react-native-view-shot`
+and is a natural follow-up.
 
 ## Checks
 

@@ -1,7 +1,17 @@
 import { useEffect, useState } from 'react';
 import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 
+import { buildShareText } from '../../lib/trip-deck';
 import { getTrip, listLegs, listTravelers } from '../../lib/trips-api';
 import type { Trip, TripLeg, TripTraveler } from '../../types/trip';
 import { CostSummaryCard } from './deck/CostSummaryCard';
@@ -38,6 +48,15 @@ export function TripDeckScreen({ tripId, onBack }: Props) {
     setPage(nextPage);
   };
 
+  const handleShare = () => {
+    if (!trip) {
+      return;
+    }
+    Share.share({ message: buildShareText(trip, legs) }).catch(() => {
+      // user cancelled the share sheet or the platform reported an error; nothing to do
+    });
+  };
+
   if (error) {
     return (
       <View style={styles.center}>
@@ -64,9 +83,14 @@ export function TripDeckScreen({ tripId, onBack }: Props) {
 
   return (
     <View style={styles.container}>
-      <Pressable onPress={onBack} style={styles.back}>
-        <Text style={styles.backText}>‹ Trip</Text>
-      </Pressable>
+      <View style={styles.header}>
+        <Pressable onPress={onBack}>
+          <Text style={styles.backText}>‹ Trip</Text>
+        </Pressable>
+        <Pressable onPress={handleShare}>
+          <Text style={styles.shareText}>Share</Text>
+        </Pressable>
+      </View>
 
       <ScrollView
         horizontal
@@ -103,13 +127,21 @@ const styles = StyleSheet.create({
   error: {
     color: '#d32f2f',
   },
-  back: {
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 4,
     paddingBottom: 8,
   },
   backText: {
     color: '#1a73e8',
     fontSize: 15,
+  },
+  shareText: {
+    color: '#1a73e8',
+    fontSize: 15,
+    fontWeight: '600',
   },
   pager: {
     flex: 1,
