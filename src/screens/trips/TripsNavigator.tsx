@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { View } from 'react-native';
 
+import { TripDeckScreen } from './TripDeckScreen';
 import { TripDetailScreen } from './TripDetailScreen';
 import { TripFormScreen } from './TripFormScreen';
 import { TripsListScreen } from './TripsListScreen';
@@ -10,7 +11,8 @@ type View_ =
   | { name: 'list' }
   | { name: 'trip-form'; tripId?: string }
   | { name: 'trip-detail'; tripId: string }
-  | { name: 'leg-form'; tripId: string; legId?: string };
+  | { name: 'leg-form'; tripId: string; legId?: string }
+  | { name: 'trip-deck'; tripId: string };
 
 type Props = {
   ownerId: string;
@@ -45,6 +47,7 @@ export function TripsNavigator({ ownerId }: Props) {
           onEditTrip={() => setView({ name: 'trip-form', tripId: view.tripId })}
           onAddLeg={() => setView({ name: 'leg-form', tripId: view.tripId })}
           onEditLeg={(legId) => setView({ name: 'leg-form', tripId: view.tripId, legId })}
+          onViewDeck={() => setView({ name: 'trip-deck', tripId: view.tripId })}
         />
       )}
 
@@ -55,6 +58,10 @@ export function TripsNavigator({ ownerId }: Props) {
           onSaved={() => setView({ name: 'trip-detail', tripId: view.tripId })}
           onCancel={() => setView({ name: 'trip-detail', tripId: view.tripId })}
         />
+      )}
+
+      {view.name === 'trip-deck' && (
+        <TripDeckScreen tripId={view.tripId} onBack={() => setView({ name: 'trip-detail', tripId: view.tripId })} />
       )}
     </View>
   );

@@ -27,6 +27,7 @@ type Props = {
   onEditTrip: () => void;
   onAddLeg: () => void;
   onEditLeg: (legId: string) => void;
+  onViewDeck: () => void;
 };
 
 const LEG_LABEL: Record<TripLeg['type'], string> = {
@@ -37,7 +38,7 @@ const LEG_LABEL: Record<TripLeg['type'], string> = {
   activity: 'Activity',
 };
 
-export function TripDetailScreen({ tripId, onBack, onEditTrip, onAddLeg, onEditLeg }: Props) {
+export function TripDetailScreen({ tripId, onBack, onEditTrip, onAddLeg, onEditLeg, onViewDeck }: Props) {
   const [trip, setTrip] = useState<Trip | null>(null);
   const [travelers, setTravelers] = useState<TripTraveler[]>([]);
   const [legs, setLegs] = useState<TripLeg[]>([]);
@@ -123,6 +124,10 @@ export function TripDetailScreen({ tripId, onBack, onEditTrip, onAddLeg, onEditL
         {trip.start_date ?? '?'} → {trip.end_date ?? '?'}
       </Text>
       <Text style={styles.cost}>Total cost: ${trip.total_cost.toFixed(2)}</Text>
+
+      <Pressable style={styles.deckButton} onPress={onViewDeck}>
+        <Text style={styles.deckButtonText}>View Trip Deck</Text>
+      </Pressable>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
@@ -223,6 +228,18 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     marginTop: 8,
+  },
+  deckButton: {
+    backgroundColor: '#1a73e8',
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  deckButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
   },
   error: {
     color: '#d32f2f',
