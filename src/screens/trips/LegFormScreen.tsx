@@ -9,7 +9,9 @@ import {
   View,
 } from 'react-native';
 
+import { ComboBoxField } from '../../components/ComboBoxField';
 import { DateTimeField } from '../../components/DateTimeField';
+import { ACTIVITY_CATEGORIES } from '../../lib/activity-categories';
 import { createLeg, getLeg, listTravelers, updateLeg } from '../../lib/trips-api';
 import type { LegType } from '../../types/trip';
 
@@ -24,11 +26,12 @@ const LEG_TYPES: { value: LegType; label: string }[] = [
   { value: 'flight', label: 'Flight' },
   { value: 'train', label: 'Train' },
   { value: 'bus', label: 'Bus' },
+  { value: 'ferry', label: 'Ferry' },
   { value: 'stay', label: 'Stay' },
   { value: 'activity', label: 'Activity' },
 ];
 
-type DetailField = { key: string; label: string; type?: 'datetime' };
+type DetailField = { key: string; label: string; type?: 'datetime' | 'combo'; options?: string[] };
 
 const DETAIL_FIELDS: Record<LegType, DetailField[]> = {
   flight: [
@@ -48,6 +51,11 @@ const DETAIL_FIELDS: Record<LegType, DetailField[]> = {
     { key: 'number', label: 'Bus number' },
     { key: 'seat', label: 'Seat' },
   ],
+  ferry: [
+    { key: 'carrier', label: 'Carrier' },
+    { key: 'number', label: 'Ferry number' },
+    { key: 'seat', label: 'Seat/Cabin' },
+  ],
   stay: [
     { key: 'address', label: 'Address' },
     { key: 'check_in_time', label: 'Check-in time', type: 'datetime' },
@@ -55,6 +63,7 @@ const DETAIL_FIELDS: Record<LegType, DetailField[]> = {
     { key: 'room_type', label: 'Room type' },
   ],
   activity: [
+    { key: 'category', label: 'Category', type: 'combo', options: ACTIVITY_CATEGORIES },
     { key: 'address', label: 'Address' },
     { key: 'booking_reference', label: 'Booking reference' },
   ],
@@ -197,16 +206,30 @@ export function LegFormScreen({ tripId, legId, onSaved, onCancel }: Props) {
       </View>
 
       <Text style={styles.sectionTitle}>Details</Text>
-      {DETAIL_FIELDS[type].map((field) =>
-        field.type === 'datetime' ? (
-          <DateTimeField
-            key={field.key}
-            label={field.label}
-            mode="datetime"
-            value={details[field.key] ?? null}
-            onChange={(value) => setDetails((current) => ({ ...current, [field.key]: value ?? '' }))}
-          />
-        ) : (
+      {DETAIL_FIELDS[type].map((field) => {
+        if (field.type === 'datetime') {
+          return (
+            <DateTimeField
+              key={field.key}
+              label={field.label}
+              mode="datetime"
+              value={details[field.key] ?? null}
+              onChange={(value) => setDetails((current) => ({ ...current, [field.key]: value ?? '' }))}
+            />
+          );
+        }
+        if (field.type === 'combo') {
+          return (
+            <ComboBoxField
+              key={field.key}
+              label={field.label}
+              options={field.options ?? []}
+              value={details[field.key] ?? ''}
+              onChange={(value) => setDetails((current) => ({ ...current, [field.key]: value }))}
+            />
+          );
+        }
+        return (
           <View key={field.key}>
             <Text style={styles.label}>{field.label}</Text>
             <TextInput
@@ -215,8 +238,8 @@ export function LegFormScreen({ tripId, legId, onSaved, onCancel }: Props) {
               onChangeText={(value) => setDetails((current) => ({ ...current, [field.key]: value }))}
             />
           </View>
-        )
-      )}
+        );
+      })}
 
       {travelers.length > 0 ? (
         <>

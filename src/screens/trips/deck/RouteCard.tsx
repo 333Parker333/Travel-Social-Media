@@ -12,7 +12,7 @@ type Stop = {
   subtitle: string;
 };
 
-const TRANSIT_TYPES: TripLeg['type'][] = ['flight', 'train', 'bus'];
+const TRANSIT_TYPES: TripLeg['type'][] = ['flight', 'train', 'bus', 'ferry'];
 
 function buildStops(legs: TripLeg[]): Stop[] {
   const stops: Stop[] = [];

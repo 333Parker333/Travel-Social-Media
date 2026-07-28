@@ -1,6 +1,6 @@
 export type TripStatus = 'draft' | 'upcoming' | 'completed' | 'archived';
 
-export type LegType = 'flight' | 'train' | 'bus' | 'stay' | 'activity';
+export type LegType = 'flight' | 'train' | 'bus' | 'ferry' | 'stay' | 'activity';
 
 export type Trip = {
   id: string;
@@ -41,6 +41,7 @@ export type StayDetails = {
 };
 
 export type ActivityDetails = {
+  category?: string;
   address?: string;
   booking_reference?: string;
 };

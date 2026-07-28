@@ -4,11 +4,12 @@ export const LEG_TYPE_LABEL: Record<LegType, string> = {
   flight: 'Flight',
   train: 'Train',
   bus: 'Bus',
+  ferry: 'Ferry',
   stay: 'Stay',
   activity: 'Activity',
 };
 
-const LEG_TYPE_ORDER: LegType[] = ['flight', 'train', 'bus', 'stay', 'activity'];
+const LEG_TYPE_ORDER: LegType[] = ['flight', 'train', 'bus', 'ferry', 'stay', 'activity'];
 
 export type DayGroup = {
   key: string;
@@ -21,6 +22,18 @@ export type TypeGroup = {
   label: string;
   legs: TripLeg[];
 };
+
+/**
+ * Activity legs with no start_time are "wishlist" ideas not locked to a
+ * day; everything else (including activities that do have a time) is
+ * scheduled. Setting or clearing a leg's start_time moves it between the
+ * two - there's no separate flag to keep in sync.
+ */
+export function partitionLegs(legs: TripLeg[]): { scheduled: TripLeg[]; wishlist: TripLeg[] } {
+  const wishlist = legs.filter((leg) => leg.type === 'activity' && !leg.start_time);
+  const scheduled = legs.filter((leg) => !(leg.type === 'activity' && !leg.start_time));
+  return { scheduled, wishlist };
+}
 
 export function groupLegsByDay(legs: TripLeg[]): DayGroup[] {
   const buckets = new Map<string, TripLeg[]>();

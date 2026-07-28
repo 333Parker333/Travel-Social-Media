@@ -19,6 +19,7 @@ import {
   removeTraveler,
   swapLegPositions,
 } from '../../lib/trips-api';
+import { partitionLegs } from '../../lib/trip-deck';
 import type { Trip, TripLeg, TripTraveler } from '../../types/trip';
 
 type Props = {
@@ -34,9 +35,18 @@ const LEG_LABEL: Record<TripLeg['type'], string> = {
   flight: 'Flight',
   train: 'Train',
   bus: 'Bus',
+  ferry: 'Ferry',
   stay: 'Stay',
   activity: 'Activity',
 };
+
+function legPrimaryLabel(leg: TripLeg): string {
+  if (leg.origin || leg.destination) {
+    return `${leg.origin || '?'} → ${leg.destination || '?'}`;
+  }
+  const details = leg.details as { category?: string; address?: string };
+  return details.category || details.address || 'Untitled';
+}
 
 export function TripDetailScreen({ tripId, onBack, onEditTrip, onAddLeg, onEditLeg, onViewDeck }: Props) {
   const [trip, setTrip] = useState<Trip | null>(null);
@@ -89,9 +99,11 @@ export function TripDetailScreen({ tripId, onBack, onEditTrip, onAddLeg, onEditL
     ]);
   };
 
+  const { scheduled, wishlist } = partitionLegs(legs);
+
   const moveLeg = (index: number, direction: -1 | 1) => {
-    const other = legs[index + direction];
-    const current = legs[index];
+    const other = scheduled[index + direction];
+    const current = scheduled[index];
     if (!other) {
       return;
     }
@@ -159,15 +171,13 @@ export function TripDetailScreen({ tripId, onBack, onEditTrip, onAddLeg, onEditL
         </Pressable>
       </View>
 
-      {legs.length === 0 ? <Text style={styles.empty}>No legs yet.</Text> : null}
+      {scheduled.length === 0 ? <Text style={styles.empty}>No legs yet.</Text> : null}
 
-      {legs.map((leg, index) => (
+      {scheduled.map((leg, index) => (
         <View key={leg.id} style={styles.legRow}>
           <Pressable style={styles.legMain} onPress={() => onEditLeg(leg.id)}>
             <Text style={styles.legType}>{LEG_LABEL[leg.type]}</Text>
-            <Text style={styles.legDetail}>
-              {leg.origin || '?'} → {leg.destination || '?'}
-            </Text>
+            <Text style={styles.legDetail}>{legPrimaryLabel(leg)}</Text>
             <Text style={styles.legMeta}>
               {leg.start_time ? new Date(leg.start_time).toLocaleString() : 'No time set'} · $
               {leg.cost.toFixed(2)}
@@ -177,8 +187,8 @@ export function TripDetailScreen({ tripId, onBack, onEditTrip, onAddLeg, onEditL
             <Pressable onPress={() => moveLeg(index, -1)} disabled={index === 0}>
               <Text style={[styles.reorder, index === 0 && styles.reorderDisabled]}>↑</Text>
             </Pressable>
-            <Pressable onPress={() => moveLeg(index, 1)} disabled={index === legs.length - 1}>
-              <Text style={[styles.reorder, index === legs.length - 1 && styles.reorderDisabled]}>↓</Text>
+            <Pressable onPress={() => moveLeg(index, 1)} disabled={index === scheduled.length - 1}>
+              <Text style={[styles.reorder, index === scheduled.length - 1 && styles.reorderDisabled]}>↓</Text>
             </Pressable>
             <Pressable onPress={() => handleDeleteLeg(leg)}>
               <Text style={styles.delete}>✕</Text>
@@ -186,6 +196,27 @@ export function TripDetailScreen({ tripId, onBack, onEditTrip, onAddLeg, onEditL
           </View>
         </View>
       ))}
+
+      {wishlist.length > 0 ? (
+        <>
+          <Text style={styles.sectionTitle}>Things to do</Text>
+          <Text style={styles.wishlistHint}>
+            Ideas without a set time. Edit one and add a time to move it into the schedule.
+          </Text>
+          {wishlist.map((leg) => (
+            <View key={leg.id} style={styles.legRow}>
+              <Pressable style={styles.legMain} onPress={() => onEditLeg(leg.id)}>
+                <Text style={styles.legType}>{LEG_LABEL[leg.type]}</Text>
+                <Text style={styles.legDetail}>{legPrimaryLabel(leg)}</Text>
+                <Text style={styles.legMeta}>${leg.cost.toFixed(2)}</Text>
+              </Pressable>
+              <Pressable onPress={() => handleDeleteLeg(leg)}>
+                <Text style={styles.delete}>✕</Text>
+              </Pressable>
+            </View>
+          ))}
+        </>
+      ) : null}
     </ScrollView>
   );
 }
@@ -297,6 +328,12 @@ const styles = StyleSheet.create({
   },
   empty: {
     color: '#888',
+  },
+  wishlistHint: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: -4,
+    marginBottom: 8,
   },
   legRow: {
     flexDirection: 'row',

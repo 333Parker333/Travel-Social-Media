@@ -6,6 +6,7 @@ import {
   formatLegTimeRange,
   groupLegsByDay,
   groupLegsByType,
+  partitionLegs,
   travelerName,
 } from '../../../lib/trip-deck';
 import type { TripLeg, TripTraveler } from '../../../types/trip';
@@ -20,7 +21,8 @@ type ViewMode = 'day' | 'type';
 export function DayByDayCard({ legs, travelers }: Props) {
   const [mode, setMode] = useState<ViewMode>('day');
 
-  const dayGroups = useMemo(() => groupLegsByDay(legs), [legs]);
+  const { scheduled, wishlist } = useMemo(() => partitionLegs(legs), [legs]);
+  const dayGroups = useMemo(() => groupLegsByDay(scheduled), [scheduled]);
   const typeGroups = useMemo(() => groupLegsByType(legs), [legs]);
 
   return (
@@ -62,22 +64,36 @@ export function DayByDayCard({ legs, travelers }: Props) {
               ))}
             </View>
           ))}
+
+      {mode === 'day' && wishlist.length > 0 ? (
+        <View style={styles.group}>
+          <Text style={styles.groupTitle}>Things to do</Text>
+          {wishlist.map((leg) => (
+            <LegRow key={leg.id} leg={leg} travelers={travelers} />
+          ))}
+        </View>
+      ) : null}
     </ScrollView>
   );
 }
 
+function legPlace(leg: TripLeg): string | null {
+  if (leg.origin || leg.destination) {
+    return `${leg.origin || '?'}${leg.destination ? ` → ${leg.destination}` : ''}`;
+  }
+  const details = leg.details as { category?: string; address?: string };
+  return details.category || details.address || null;
+}
+
 function LegRow({ leg, travelers }: { leg: TripLeg; travelers: TripTraveler[] }) {
+  const place = legPlace(leg);
   return (
     <View style={styles.legRow}>
       <View style={styles.legHeaderRow}>
         <Text style={styles.legType}>{LEG_TYPE_LABEL[leg.type]}</Text>
         <Text style={styles.legTime}>{formatLegTimeRange(leg)}</Text>
       </View>
-      {leg.origin || leg.destination ? (
-        <Text style={styles.legPlace}>
-          {leg.origin || '?'} {leg.destination ? `→ ${leg.destination}` : ''}
-        </Text>
-      ) : null}
+      {place ? <Text style={styles.legPlace}>{place}</Text> : null}
       <View style={styles.legFooterRow}>
         <Text style={styles.legCost}>${leg.cost.toFixed(2)}</Text>
         {leg.applies_to.length > 0 ? (
