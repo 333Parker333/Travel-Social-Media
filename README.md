@@ -37,6 +37,28 @@ order (Supabase dashboard > SQL Editor, paste and run each file):
   friend's email to their user id without being able to browse the
   `profiles` table, plus an RLS policy letting a trip owner view the
   profiles of people they've shared a trip with.
+- `0005_booking_ingestion.sql` — a private `booking-uploads` storage
+  bucket (with policies scoping each user to their own folder) and an
+  `ingested_bookings` table (owner-only RLS) tracking each photo upload
+  from `processing` through to a reviewed/applied leg.
+
+### Booking photo import (Edge Function)
+
+Importing a booking from a photo calls a Supabase Edge Function
+(`supabase/functions/extract-booking`) that sends the image to Claude for
+extraction. This needs to be deployed and given an API key — both steps
+I can't do from this environment, so run them yourself once you have the
+Supabase CLI linked to your project:
+
+```bash
+supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
+supabase functions deploy extract-booking
+```
+
+Get an API key from [console.anthropic.com](https://console.anthropic.com).
+Until this is deployed, "Add from photo" will fail at the extraction
+step (the upload itself still works) — that's expected until you've run
+the two commands above.
 
 ## Running
 
@@ -82,6 +104,17 @@ works for messaging apps, notes, etc.; a richer image export (for
 Instagram/TikTok Stories specifically) would need `react-native-view-shot`
 and is a natural follow-up.
 
+**Booking import (photo only for now).** From a trip's detail screen,
+"Add from photo" lets you take a photo or pick a screenshot of a
+confirmation. It uploads to Supabase Storage and calls the
+`extract-booking` Edge Function (see setup above), which sends the image
+to Claude and extracts flight/train/bus/ferry/stay/activity fields. You
+always land on the normal leg form pre-filled with whatever it found —
+nothing is saved automatically, and if extraction fails you get a plain
+form with an explanation instead of a broken experience. Email-forwarded
+bookings (the other half of this build step) are a separate pass once a
+domain and inbound-email provider are set up.
+
 ## Checks
 
 ```bash
@@ -102,19 +135,22 @@ src/lib/auth-context.tsx             # session state + signUp/signIn/signOut
 src/lib/trips-api.ts                 # Supabase query helpers for trips/travelers/legs
 src/lib/trip-deck.ts                 # grouping/formatting/partitioning helpers for the deck cards
 src/lib/activity-categories.ts       # preset activity category list
+src/lib/booking-ingestion-api.ts     # upload photo, invoke extract-booking, mark applied/dismissed
 src/screens/AuthScreen.tsx           # sign up / login form
 src/screens/ProfileScreen.tsx        # header + sign out, hosts TripsNavigator
-src/screens/trips/TripsNavigator.tsx # simple stack: list/trip-form/trip-detail/leg-form/trip-deck
+src/screens/trips/TripsNavigator.tsx # stack: list/trip-form/trip-detail/leg-form/trip-deck/import-booking
 src/screens/trips/TripsListScreen.tsx
 src/screens/trips/TripFormScreen.tsx
 src/screens/trips/TripDetailScreen.tsx
 src/screens/trips/LegFormScreen.tsx
+src/screens/trips/ImportBookingScreen.tsx # take/pick a photo, upload, wait on extraction
 src/screens/trips/TripDeckScreen.tsx # swipeable pager hosting the 5 deck cards
 src/screens/trips/deck/CoverCard.tsx
 src/screens/trips/deck/RouteCard.tsx
 src/screens/trips/deck/DayByDayCard.tsx
 src/screens/trips/deck/CostSummaryCard.tsx
 src/screens/trips/deck/MasterScheduleCard.tsx
-src/types/trip.ts                    # Trip/TripLeg/TripTraveler types
+src/types/trip.ts                    # Trip/TripLeg/TripTraveler/IngestedBooking types
 supabase/migrations/                 # SQL to run against your Supabase project
+supabase/functions/extract-booking/  # Edge Function: image -> Claude -> structured leg JSON
 ```

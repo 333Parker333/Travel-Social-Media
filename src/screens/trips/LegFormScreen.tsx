@@ -12,12 +12,16 @@ import {
 import { ComboBoxField } from '../../components/ComboBoxField';
 import { DateTimeField } from '../../components/DateTimeField';
 import { ACTIVITY_CATEGORIES } from '../../lib/activity-categories';
+import { markBookingApplied } from '../../lib/booking-ingestion-api';
 import { createLeg, getLeg, listTravelers, updateLeg } from '../../lib/trips-api';
-import type { LegType } from '../../types/trip';
+import type { ExtractedBooking, LegType } from '../../types/trip';
 
 type Props = {
   tripId: string;
   legId?: string;
+  initialValues?: ExtractedBooking;
+  ingestedBookingId?: string;
+  importError?: string;
   onSaved: () => void;
   onCancel: () => void;
 };
@@ -69,19 +73,29 @@ const DETAIL_FIELDS: Record<LegType, DetailField[]> = {
   ],
 };
 
-export function LegFormScreen({ tripId, legId, onSaved, onCancel }: Props) {
+export function LegFormScreen({
+  tripId,
+  legId,
+  initialValues,
+  ingestedBookingId,
+  importError,
+  onSaved,
+  onCancel,
+}: Props) {
   const [loading, setLoading] = useState(Boolean(legId));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [type, setType] = useState<LegType>('flight');
-  const [startTime, setStartTime] = useState<string | null>(null);
-  const [endTime, setEndTime] = useState<string | null>(null);
-  const [origin, setOrigin] = useState('');
-  const [destination, setDestination] = useState('');
-  const [cost, setCost] = useState('');
-  const [confirmationNumber, setConfirmationNumber] = useState('');
-  const [details, setDetails] = useState<Record<string, string>>({});
+  const [type, setType] = useState<LegType>(initialValues?.type ?? 'flight');
+  const [startTime, setStartTime] = useState<string | null>(initialValues?.start_time ?? null);
+  const [endTime, setEndTime] = useState<string | null>(initialValues?.end_time ?? null);
+  const [origin, setOrigin] = useState(initialValues?.origin ?? '');
+  const [destination, setDestination] = useState(initialValues?.destination ?? '');
+  const [cost, setCost] = useState(initialValues?.cost ? String(initialValues.cost) : '');
+  const [confirmationNumber, setConfirmationNumber] = useState(initialValues?.confirmation_number ?? '');
+  const [details, setDetails] = useState<Record<string, string>>(
+    (initialValues?.details as Record<string, string>) ?? {}
+  );
   const [travelers, setTravelers] = useState<{ id: string; display_name: string }[]>([]);
   const [appliesTo, setAppliesTo] = useState<string[]>([]);
 
@@ -143,7 +157,10 @@ export function LegFormScreen({ tripId, legId, onSaved, onCancel }: Props) {
       if (legId) {
         await updateLeg(legId, input);
       } else {
-        await createLeg(tripId, input);
+        const created = await createLeg(tripId, input);
+        if (ingestedBookingId) {
+          await markBookingApplied(ingestedBookingId, created.id);
+        }
       }
       onSaved();
     } catch (err) {
@@ -159,6 +176,13 @@ export function LegFormScreen({ tripId, legId, onSaved, onCancel }: Props) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {initialValues ? (
+        <Text style={styles.importBanner}>Filled in from your photo — review before saving.</Text>
+      ) : null}
+      {importError ? (
+        <Text style={styles.importBannerError}>{importError}</Text>
+      ) : null}
+
       <Text style={styles.label}>Type</Text>
       <View style={styles.typeRow}>
         {LEG_TYPES.map((option) => (
@@ -286,6 +310,20 @@ const styles = StyleSheet.create({
   },
   spinner: {
     marginTop: 24,
+  },
+  importBanner: {
+    backgroundColor: '#eef3fe',
+    color: '#1a73e8',
+    fontSize: 13,
+    padding: 10,
+    borderRadius: 8,
+  },
+  importBannerError: {
+    backgroundColor: '#fdecea',
+    color: '#d32f2f',
+    fontSize: 13,
+    padding: 10,
+    borderRadius: 8,
   },
   label: {
     fontSize: 13,

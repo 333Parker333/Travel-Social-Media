@@ -79,3 +79,29 @@ export type LegAttachment = {
   content_type: string | null;
   created_at: string;
 };
+
+export type IngestedBookingStatus = 'processing' | 'ready' | 'error' | 'applied' | 'dismissed';
+
+export type ExtractedBooking = {
+  type: LegType;
+  origin: string | null;
+  destination: string | null;
+  start_time: string | null;
+  end_time: string | null;
+  cost: number;
+  confirmation_number: string | null;
+  details: Record<string, string | undefined>;
+};
+
+export type IngestedBooking = {
+  id: string;
+  user_id: string;
+  trip_id: string | null;
+  leg_id: string | null;
+  file_path: string;
+  status: IngestedBookingStatus;
+  extracted: ExtractedBooking | null;
+  error_message: string | null;
+  created_at: string;
+  updated_at: string;
+};

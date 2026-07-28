@@ -10,6 +10,15 @@
     },
     "android": {
       "predictiveBackGestureEnabled": false
-    }
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Trip Deck to access your photos so you can import booking confirmations.",
+          "cameraPermission": "Allow Trip Deck to use the camera so you can photograph booking confirmations."
+        }
+      ]
+    ]
   }
 }

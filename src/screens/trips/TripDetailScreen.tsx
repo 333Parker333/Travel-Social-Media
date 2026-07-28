@@ -34,6 +34,7 @@ type Props = {
   onAddLeg: () => void;
   onEditLeg: (legId: string) => void;
   onViewDeck: () => void;
+  onImportBooking: () => void;
 };
 
 const LEG_LABEL: Record<TripLeg['type'], string> = {
@@ -61,6 +62,7 @@ export function TripDetailScreen({
   onAddLeg,
   onEditLeg,
   onViewDeck,
+  onImportBooking,
 }: Props) {
   const [trip, setTrip] = useState<Trip | null>(null);
   const [travelers, setTravelers] = useState<TripTraveler[]>([]);
@@ -266,9 +268,14 @@ export function TripDetailScreen({
       <View style={styles.legsHeader}>
         <Text style={styles.sectionTitle}>Legs</Text>
         {isOwner ? (
-          <Pressable style={styles.addButton} onPress={onAddLeg}>
-            <Text style={styles.addButtonText}>+ Add leg</Text>
-          </Pressable>
+          <View style={styles.legsHeaderButtons}>
+            <Pressable style={styles.addButtonSecondary} onPress={onImportBooking}>
+              <Text style={styles.addButtonSecondaryText}>Add from photo</Text>
+            </Pressable>
+            <Pressable style={styles.addButton} onPress={onAddLeg}>
+              <Text style={styles.addButtonText}>+ Add leg</Text>
+            </Pressable>
+          </View>
         ) : null}
       </View>
 
@@ -436,6 +443,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  legsHeaderButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  addButtonSecondary: {
+    borderWidth: 1,
+    borderColor: '#1a73e8',
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    justifyContent: 'center',
+  },
+  addButtonSecondaryText: {
+    color: '#1a73e8',
+    fontWeight: '600',
+    fontSize: 13,
   },
   empty: {
     color: '#888',
