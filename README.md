@@ -39,8 +39,11 @@ npm run web
 ```
 
 Without a configured `.env`, the app shows a "Supabase not configured"
-screen. Once configured, it shows email/password sign up and login, then a
-profile shell with a sign-out button.
+screen. Once configured, it shows email/password sign up and login, then
+your trip list. From there: create a trip, add travelers by name, and add
+legs (flight/train/bus/stay/activity) with type-specific fields, cost, and
+traveler tagging. Dates/times are plain text fields (`YYYY-MM-DD` /
+ISO 8601) for now — native date/time pickers are a polish-step upgrade.
 
 ## Checks
 
@@ -54,11 +57,17 @@ These also run in CI on every push/PR to `main`.
 ## Project structure
 
 ```
-App.tsx                        # entry point, auth-gated routing
-src/lib/supabase.ts            # Supabase client
-src/lib/auth-context.tsx       # session state + signUp/signIn/signOut
-src/screens/AuthScreen.tsx     # sign up / login form
-src/screens/ProfileScreen.tsx  # profile shell shown once authenticated
-src/types/trip.ts              # Trip/TripLeg/TripTraveler types
-supabase/migrations/           # SQL to run against your Supabase project
+App.tsx                              # entry point, auth-gated routing
+src/lib/supabase.ts                  # Supabase client
+src/lib/auth-context.tsx             # session state + signUp/signIn/signOut
+src/lib/trips-api.ts                 # Supabase query helpers for trips/travelers/legs
+src/screens/AuthScreen.tsx           # sign up / login form
+src/screens/ProfileScreen.tsx        # header + sign out, hosts TripsNavigator
+src/screens/trips/TripsNavigator.tsx # simple stack: list/trip-form/trip-detail/leg-form
+src/screens/trips/TripsListScreen.tsx
+src/screens/trips/TripFormScreen.tsx
+src/screens/trips/TripDetailScreen.tsx
+src/screens/trips/LegFormScreen.tsx
+src/types/trip.ts                    # Trip/TripLeg/TripTraveler types
+supabase/migrations/                 # SQL to run against your Supabase project
 ```

@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 
 import { useAuth } from '../lib/auth-context';
 import { supabase } from '../lib/supabase';
+import { TripsNavigator } from './trips/TripsNavigator';
 
 type Profile = {
   display_name: string | null;
@@ -12,7 +13,6 @@ type Profile = {
 export function ProfileScreen() {
   const { user, signOut } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) {
@@ -29,7 +29,6 @@ export function ProfileScreen() {
       .then(({ data }) => {
         if (!cancelled) {
           setProfile(data);
-          setLoading(false);
         }
       });
 
@@ -43,21 +42,22 @@ export function ProfileScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Your trips</Text>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        {profile ? (
+          <Text style={styles.email}>{profile.display_name || profile.email}</Text>
+        ) : (
+          <ActivityIndicator size="small" />
+        )}
+        <Pressable style={styles.signOut} onPress={signOut}>
+          <Text style={styles.signOutText}>Sign out</Text>
+        </Pressable>
+      </View>
 
-      {loading ? (
-        <ActivityIndicator />
-      ) : (
-        <Text style={styles.email}>{profile?.display_name || profile?.email || user.email}</Text>
-      )}
-
-      <Text style={styles.placeholder}>No trips yet. Trip creation is coming in the next step.</Text>
-
-      <Pressable style={styles.signOut} onPress={signOut}>
-        <Text style={styles.signOutText}>Sign out</Text>
-      </Pressable>
-    </View>
+      <View style={styles.body}>
+        <TripsNavigator ownerId={user.id} />
+      </View>
+    </SafeAreaView>
   );
 }
 
@@ -65,35 +65,36 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-    gap: 12,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
   },
   email: {
-    fontSize: 16,
+    fontSize: 15,
     color: '#333',
-  },
-  placeholder: {
-    fontSize: 14,
-    color: '#888',
-    textAlign: 'center',
-    marginVertical: 16,
   },
   signOut: {
     borderWidth: 1,
     borderColor: '#d32f2f',
     borderRadius: 8,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
   },
   signOutText: {
     color: '#d32f2f',
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '600',
+  },
+  body: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 16,
   },
 });
