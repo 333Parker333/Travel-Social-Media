@@ -19,6 +19,11 @@ Fill in `.env` with your Supabase project's URL and anon key (Project
 Settings > API in the Supabase dashboard). Use an EU-region project for
 GDPR compliance.
 
+Then run the migration in `supabase/migrations/0001_profiles.sql` against
+your project (Supabase dashboard > SQL Editor, paste and run). It creates
+the `profiles` table, row-level security policies, and a trigger that
+creates a profile row on sign up.
+
 ## Running
 
 ```bash
@@ -28,8 +33,9 @@ npm run android
 npm run web
 ```
 
-The home screen shows a live Supabase connection status check to confirm
-your `.env` is wired up correctly.
+Without a configured `.env`, the app shows a "Supabase not configured"
+screen. Once configured, it shows email/password sign up and login, then a
+profile shell with a sign-out button.
 
 ## Checks
 
@@ -43,6 +49,10 @@ These also run in CI on every push/PR to `main`.
 ## Project structure
 
 ```
-App.tsx            # entry screen
-src/lib/supabase.ts # Supabase client
+App.tsx                        # entry point, auth-gated routing
+src/lib/supabase.ts            # Supabase client
+src/lib/auth-context.tsx       # session state + signUp/signIn/signOut
+src/screens/AuthScreen.tsx     # sign up / login form
+src/screens/ProfileScreen.tsx  # profile shell shown once authenticated
+supabase/migrations/           # SQL to run against your Supabase project
 ```
