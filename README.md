@@ -19,10 +19,15 @@ Fill in `.env` with your Supabase project's URL and anon key (Project
 Settings > API in the Supabase dashboard). Use an EU-region project for
 GDPR compliance.
 
-Then run the migration in `supabase/migrations/0001_profiles.sql` against
-your project (Supabase dashboard > SQL Editor, paste and run). It creates
-the `profiles` table, row-level security policies, and a trigger that
-creates a profile row on sign up.
+Then run the migrations in `supabase/migrations/` against your project, in
+order (Supabase dashboard > SQL Editor, paste and run each file):
+
+- `0001_profiles.sql` — `profiles` table, RLS, and a trigger that creates a
+  profile row on sign up.
+- `0002_trips.sql` — trip data model: `trips`, `trip_travelers`,
+  `trip_legs` (flights/trains/buses/stays/activities), `leg_attachments`,
+  RLS scoped to the trip owner (plus read access for `shared_with` users),
+  and a trigger that keeps `trips.total_cost` in sync with leg costs.
 
 ## Running
 
@@ -54,5 +59,6 @@ src/lib/supabase.ts            # Supabase client
 src/lib/auth-context.tsx       # session state + signUp/signIn/signOut
 src/screens/AuthScreen.tsx     # sign up / login form
 src/screens/ProfileScreen.tsx  # profile shell shown once authenticated
+src/types/trip.ts              # Trip/TripLeg/TripTraveler types
 supabase/migrations/           # SQL to run against your Supabase project
 ```
