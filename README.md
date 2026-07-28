@@ -5,8 +5,35 @@ swipeable "Trip Deck" to share. Built with React Native (Expo) and Supabase.
 
 ## Stack
 
-- **App**: Expo + React Native + TypeScript
+- **App**: Expo + React Native + TypeScript — targeting iOS, Android, **and
+  web** (`npm run web`, via `react-native-web`) as equally-supported
+  platforms
 - **Backend**: Supabase (Postgres, EU region)
+
+### Web-specific notes
+
+Two React Native APIs used in this app don't have full web equivalents,
+so treat them carefully if you touch this code:
+
+- `Alert.alert()` is a **complete no-op** in `react-native-web` (does
+  nothing at all, not even a degraded version) — use
+  `src/lib/confirm.ts`'s `confirmDestructiveAction()` instead of calling
+  `Alert.alert` directly for any new confirmation dialogs.
+- `Share.share()` works on web via `navigator.share`, but rejects on
+  browsers without the Web Share API (most desktop browsers). See the
+  fallback pattern in `TripDeckScreen.handleShare` (clipboard copy, then
+  a manual-copy prompt as a last resort) before assuming `Share.share`
+  alone is enough.
+- `src/lib/web-styles.ts` exports `webMaxWidthStyle`, applied to the
+  top-level containers in `AuthScreen`/`ProfileScreen` so forms and lists
+  don't stretch edge-to-edge on a wide desktop browser. No-op on native.
+
+**Known gap, not fixed in this pass:** navigation is in-memory view-state
+(`TripsNavigator`'s `useState` stack), not URL-based, so the browser back
+button and bookmarking/refresh-to-same-screen don't work on web — refreshing
+always lands back at the trip list. Moving to `expo-router` would fix
+this properly but is a real navigation-architecture change, not a small
+patch; flagging it rather than doing it unprompted.
 
 ## Setup
 
@@ -128,8 +155,10 @@ These also run in CI on every push/PR to `main`.
 
 ```
 App.tsx                              # entry point, auth-gated routing
-src/components/DateTimeField.tsx     # cross-platform native date/time picker field
+src/components/DateTimeField.tsx     # cross-platform native date/time picker field (incl. web <input>)
 src/components/ComboBoxField.tsx     # preset dropdown + custom text entry ("Other")
+src/lib/confirm.ts                   # confirmDestructiveAction() - Alert.alert is a no-op on web
+src/lib/web-styles.ts                # webMaxWidthStyle - caps content width on web only
 src/lib/supabase.ts                  # Supabase client
 src/lib/auth-context.tsx             # session state + signUp/signIn/signOut
 src/lib/trips-api.ts                 # Supabase query helpers for trips/travelers/legs

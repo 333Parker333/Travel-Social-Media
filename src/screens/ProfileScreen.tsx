@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, SafeAreaView, StyleSheet, Text, View } fr
 
 import { useAuth } from '../lib/auth-context';
 import { supabase } from '../lib/supabase';
+import { webMaxWidthStyle } from '../lib/web-styles';
 import { TripsNavigator } from './trips/TripsNavigator';
 
 type Profile = {
@@ -54,7 +55,7 @@ export function ProfileScreen() {
         </Pressable>
       </View>
 
-      <View style={styles.body}>
+      <View style={[styles.body, webMaxWidthStyle]}>
         <TripsNavigator ownerId={user.id} />
       </View>
     </SafeAreaView>

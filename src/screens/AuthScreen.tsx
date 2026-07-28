@@ -7,9 +7,11 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  View,
 } from 'react-native';
 
 import { useAuth } from '../lib/auth-context';
+import { webMaxWidthStyle } from '../lib/web-styles';
 
 type Mode = 'sign-in' | 'sign-up';
 
@@ -45,55 +47,57 @@ export function AuthScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <Text style={styles.title}>Trip Deck</Text>
-      <Text style={styles.subtitle}>{mode === 'sign-in' ? 'Log in' : 'Create an account'}</Text>
+      <View style={[styles.form, webMaxWidthStyle]}>
+        <Text style={styles.title}>Trip Deck</Text>
+        <Text style={styles.subtitle}>{mode === 'sign-in' ? 'Log in' : 'Create an account'}</Text>
 
-      {checkEmail ? (
-        <Text style={styles.info}>Check your email to confirm your account, then log in.</Text>
-      ) : (
-        <>
-          <TextInput
-            style={styles.input}
-            placeholder="Email"
-            autoCapitalize="none"
-            autoComplete="email"
-            keyboardType="email-address"
-            value={email}
-            onChangeText={setEmail}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Password"
-            secureTextEntry
-            autoCapitalize="none"
-            autoComplete="password"
-            value={password}
-            onChangeText={setPassword}
-          />
+        {checkEmail ? (
+          <Text style={styles.info}>Check your email to confirm your account, then log in.</Text>
+        ) : (
+          <>
+            <TextInput
+              style={styles.input}
+              placeholder="Email"
+              autoCapitalize="none"
+              autoComplete="email"
+              keyboardType="email-address"
+              value={email}
+              onChangeText={setEmail}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Password"
+              secureTextEntry
+              autoCapitalize="none"
+              autoComplete="password"
+              value={password}
+              onChangeText={setPassword}
+            />
 
-          {error ? <Text style={styles.error}>{error}</Text> : null}
+            {error ? <Text style={styles.error}>{error}</Text> : null}
 
-          <Pressable style={styles.button} onPress={submit} disabled={submitting}>
-            {submitting ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.buttonText}>{mode === 'sign-in' ? 'Log in' : 'Sign up'}</Text>
-            )}
-          </Pressable>
-        </>
-      )}
+            <Pressable style={styles.button} onPress={submit} disabled={submitting}>
+              {submitting ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.buttonText}>{mode === 'sign-in' ? 'Log in' : 'Sign up'}</Text>
+              )}
+            </Pressable>
+          </>
+        )}
 
-      <Pressable
-        onPress={() => {
-          setError(null);
-          setCheckEmail(false);
-          setMode(mode === 'sign-in' ? 'sign-up' : 'sign-in');
-        }}
-      >
-        <Text style={styles.toggle}>
-          {mode === 'sign-in' ? "Don't have an account? Sign up" : 'Already have an account? Log in'}
-        </Text>
-      </Pressable>
+        <Pressable
+          onPress={() => {
+            setError(null);
+            setCheckEmail(false);
+            setMode(mode === 'sign-in' ? 'sign-up' : 'sign-in');
+          }}
+        >
+          <Text style={styles.toggle}>
+            {mode === 'sign-in' ? "Don't have an account? Sign up" : 'Already have an account? Log in'}
+          </Text>
+        </Pressable>
+      </View>
     </KeyboardAvoidingView>
   );
 }
@@ -105,6 +109,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
+  },
+  form: {
+    alignItems: 'center',
     gap: 12,
   },
   title: {

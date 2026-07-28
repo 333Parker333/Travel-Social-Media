@@ -1,15 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { confirmDestructiveAction } from '../../lib/confirm';
 import {
   addTraveler,
   deleteLeg,
@@ -146,15 +138,20 @@ export function TripDetailScreen({
       .catch((err: Error) => setError(err.message));
   };
 
-  const handleDeleteLeg = (leg: TripLeg) => {
-    Alert.alert('Delete leg?', `Remove this ${LEG_LABEL[leg.type].toLowerCase()} from the trip?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: () => deleteLeg(leg.id).then(load).catch((err: Error) => setError(err.message)),
-      },
-    ]);
+  const handleDeleteLeg = async (leg: TripLeg) => {
+    const confirmed = await confirmDestructiveAction(
+      'Delete leg?',
+      `Remove this ${LEG_LABEL[leg.type].toLowerCase()} from the trip?`
+    );
+    if (!confirmed) {
+      return;
+    }
+    try {
+      await deleteLeg(leg.id);
+      load();
+    } catch (err) {
+      setError((err as Error).message);
+    }
   };
 
   const { scheduled, wishlist } = partitionLegs(legs);

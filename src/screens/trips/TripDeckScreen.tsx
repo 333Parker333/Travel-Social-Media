@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 import {
   ActivityIndicator,
+  Platform,
   Pressable,
   ScrollView,
   Share,
@@ -32,6 +33,7 @@ export function TripDeckScreen({ tripId, onBack }: Props) {
   const [legs, setLegs] = useState<TripLeg[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(0);
+  const [shareFeedback, setShareFeedback] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([getTrip(tripId), listTravelers(tripId), listLegs(tripId)])
@@ -48,13 +50,30 @@ export function TripDeckScreen({ tripId, onBack }: Props) {
     setPage(nextPage);
   };
 
-  const handleShare = () => {
+  const handleShare = async () => {
     if (!trip) {
       return;
     }
-    Share.share({ message: buildShareText(trip, legs) }).catch(() => {
-      // user cancelled the share sheet or the platform reported an error; nothing to do
-    });
+    const text = buildShareText(trip, legs);
+
+    try {
+      await Share.share({ message: text });
+    } catch (err) {
+      const isUserCancelled = Platform.OS !== 'web' || (err as { name?: string }).name === 'AbortError';
+      if (isUserCancelled) {
+        return;
+      }
+
+      // Web browsers without the Web Share API (Share.share rejects there) -
+      // fall back to clipboard, then to a manual-copy prompt as a last resort.
+      try {
+        await navigator.clipboard.writeText(text);
+        setShareFeedback('Copied to clipboard');
+      } catch {
+        window.prompt('Copy this to share:', text);
+      }
+      setTimeout(() => setShareFeedback(null), 2500);
+    }
   };
 
   if (error) {
@@ -87,6 +106,7 @@ export function TripDeckScreen({ tripId, onBack }: Props) {
         <Pressable onPress={onBack}>
           <Text style={styles.backText}>‹ Trip</Text>
         </Pressable>
+        {shareFeedback ? <Text style={styles.shareFeedback}>{shareFeedback}</Text> : null}
         <Pressable onPress={handleShare}>
           <Text style={styles.shareText}>Share</Text>
         </Pressable>
@@ -142,6 +162,10 @@ const styles = StyleSheet.create({
     color: '#1a73e8',
     fontSize: 15,
     fontWeight: '600',
+  },
+  shareFeedback: {
+    color: '#888',
+    fontSize: 13,
   },
   pager: {
     flex: 1,
