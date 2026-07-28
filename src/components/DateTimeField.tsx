@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
@@ -30,6 +30,14 @@ function formatDisplay(value: string | null, mode: Mode, placeholder?: string): 
   }
   const date = parseValue(value);
   return mode === 'date' ? date.toLocaleDateString() : date.toLocaleString();
+}
+
+// "YYYY-MM-DDTHH:mm" in LOCAL time, the format <input type="datetime-local">
+// expects/emits - not toISOString(), which is UTC and would show the wrong
+// wall-clock time to the user.
+function toDatetimeLocalInputValue(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
 /**
@@ -74,6 +82,35 @@ export function DateTimeField({ label, value, mode, onChange, placeholder }: Pro
     }
     onChange(mode === 'date' ? toDateOnly(selected) : selected.toISOString());
   };
+
+  if (Platform.OS === 'web') {
+    const webValue = mode === 'date' ? (value ?? '') : toDatetimeLocalInputValue(parseValue(value));
+
+    const handleWebChange = (event: { target: { value: string } }) => {
+      const inputValue = event.target.value;
+      if (!inputValue) {
+        onChange(null);
+        return;
+      }
+      if (mode === 'date') {
+        onChange(inputValue);
+      } else {
+        onChange(new Date(inputValue).toISOString());
+      }
+    };
+
+    return (
+      <View>
+        <Text style={styles.label}>{label}</Text>
+        <input
+          type={mode === 'date' ? 'date' : 'datetime-local'}
+          value={webValue}
+          onChange={handleWebChange}
+          style={webInputStyle}
+        />
+      </View>
+    );
+  }
 
   if (Platform.OS === 'ios') {
     return (
@@ -122,3 +159,15 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 });
+
+// Plain DOM CSS (not a StyleSheet object) matching the look of `styles.input`,
+// for the raw <input> used on web.
+const webInputStyle: CSSProperties = {
+  border: '1px solid #ccc',
+  borderRadius: 8,
+  padding: 10,
+  fontSize: 16,
+  fontFamily: 'inherit',
+  width: '100%',
+  boxSizing: 'border-box',
+};
