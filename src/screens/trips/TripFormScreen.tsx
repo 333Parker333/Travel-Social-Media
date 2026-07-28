@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 
+import { DateTimeField } from '../../components/DateTimeField';
 import { createTrip, getTrip, updateTrip } from '../../lib/trips-api';
 
 type Props = {
@@ -25,8 +26,8 @@ export function TripFormScreen({ ownerId, tripId, onSaved, onCancel }: Props) {
 
   const [title, setTitle] = useState('');
   const [destinations, setDestinations] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [startDate, setStartDate] = useState<string | null>(null);
+  const [endDate, setEndDate] = useState<string | null>(null);
 
   useEffect(() => {
     if (!tripId) {
@@ -36,8 +37,8 @@ export function TripFormScreen({ ownerId, tripId, onSaved, onCancel }: Props) {
       .then((trip) => {
         setTitle(trip.title);
         setDestinations(trip.destinations.join(', '));
-        setStartDate(trip.start_date ?? '');
-        setEndDate(trip.end_date ?? '');
+        setStartDate(trip.start_date);
+        setEndDate(trip.end_date);
         setLoading(false);
       })
       .catch((err: Error) => {
@@ -65,8 +66,8 @@ export function TripFormScreen({ ownerId, tripId, onSaved, onCancel }: Props) {
         await updateTrip(tripId, {
           title: title.trim(),
           destinations: destinationList,
-          start_date: startDate || null,
-          end_date: endDate || null,
+          start_date: startDate,
+          end_date: endDate,
         });
         onSaved(tripId);
       } else {
@@ -74,8 +75,8 @@ export function TripFormScreen({ ownerId, tripId, onSaved, onCancel }: Props) {
           owner: ownerId,
           title: title.trim(),
           destinations: destinationList,
-          start_date: startDate || null,
-          end_date: endDate || null,
+          start_date: startDate,
+          end_date: endDate,
         });
         onSaved(trip.id);
       }
@@ -105,12 +106,10 @@ export function TripFormScreen({ ownerId, tripId, onSaved, onCancel }: Props) {
 
       <View style={styles.row}>
         <View style={styles.half}>
-          <Text style={styles.label}>Start date</Text>
-          <TextInput style={styles.input} value={startDate} onChangeText={setStartDate} placeholder="YYYY-MM-DD" />
+          <DateTimeField label="Start date" mode="date" value={startDate} onChange={setStartDate} />
         </View>
         <View style={styles.half}>
-          <Text style={styles.label}>End date</Text>
-          <TextInput style={styles.input} value={endDate} onChangeText={setEndDate} placeholder="YYYY-MM-DD" />
+          <DateTimeField label="End date" mode="date" value={endDate} onChange={setEndDate} />
         </View>
       </View>
 

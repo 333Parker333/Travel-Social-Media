@@ -42,8 +42,9 @@ Without a configured `.env`, the app shows a "Supabase not configured"
 screen. Once configured, it shows email/password sign up and login, then
 your trip list. From there: create a trip, add travelers by name, and add
 legs (flight/train/bus/stay/activity) with type-specific fields, cost, and
-traveler tagging. Dates/times are plain text fields (`YYYY-MM-DD` /
-ISO 8601) for now — native date/time pickers are a polish-step upgrade.
+traveler tagging. Dates and times use the native date/time picker
+(`@react-native-community/datetimepicker`, included in Expo Go — no
+development build needed).
 
 ## Checks
 
@@ -58,6 +59,7 @@ These also run in CI on every push/PR to `main`.
 
 ```
 App.tsx                              # entry point, auth-gated routing
+src/components/DateTimeField.tsx     # cross-platform native date/time picker field
 src/lib/supabase.ts                  # Supabase client
 src/lib/auth-context.tsx             # session state + signUp/signIn/signOut
 src/lib/trips-api.ts                 # Supabase query helpers for trips/travelers/legs

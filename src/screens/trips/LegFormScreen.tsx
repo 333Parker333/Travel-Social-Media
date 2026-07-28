@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 
+import { DateTimeField } from '../../components/DateTimeField';
 import { createLeg, getLeg, listTravelers, updateLeg } from '../../lib/trips-api';
 import type { LegType } from '../../types/trip';
 
@@ -27,7 +28,9 @@ const LEG_TYPES: { value: LegType; label: string }[] = [
   { value: 'activity', label: 'Activity' },
 ];
 
-const DETAIL_FIELDS: Record<LegType, { key: string; label: string }[]> = {
+type DetailField = { key: string; label: string; type?: 'datetime' };
+
+const DETAIL_FIELDS: Record<LegType, DetailField[]> = {
   flight: [
     { key: 'airline', label: 'Airline' },
     { key: 'flight_number', label: 'Flight number' },
@@ -47,8 +50,8 @@ const DETAIL_FIELDS: Record<LegType, { key: string; label: string }[]> = {
   ],
   stay: [
     { key: 'address', label: 'Address' },
-    { key: 'check_in_time', label: 'Check-in time' },
-    { key: 'check_out_time', label: 'Check-out time' },
+    { key: 'check_in_time', label: 'Check-in time', type: 'datetime' },
+    { key: 'check_out_time', label: 'Check-out time', type: 'datetime' },
     { key: 'room_type', label: 'Room type' },
   ],
   activity: [
@@ -63,8 +66,8 @@ export function LegFormScreen({ tripId, legId, onSaved, onCancel }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const [type, setType] = useState<LegType>('flight');
-  const [startTime, setStartTime] = useState('');
-  const [endTime, setEndTime] = useState('');
+  const [startTime, setStartTime] = useState<string | null>(null);
+  const [endTime, setEndTime] = useState<string | null>(null);
   const [origin, setOrigin] = useState('');
   const [destination, setDestination] = useState('');
   const [cost, setCost] = useState('');
@@ -84,8 +87,8 @@ export function LegFormScreen({ tripId, legId, onSaved, onCancel }: Props) {
     getLeg(legId)
       .then((leg) => {
         setType(leg.type);
-        setStartTime(leg.start_time ?? '');
-        setEndTime(leg.end_time ?? '');
+        setStartTime(leg.start_time);
+        setEndTime(leg.end_time);
         setOrigin(leg.origin ?? '');
         setDestination(leg.destination ?? '');
         setCost(leg.cost ? String(leg.cost) : '');
@@ -117,8 +120,8 @@ export function LegFormScreen({ tripId, legId, onSaved, onCancel }: Props) {
 
     const input = {
       type,
-      start_time: startTime || null,
-      end_time: endTime || null,
+      start_time: startTime,
+      end_time: endTime,
       origin: origin || null,
       destination: destination || null,
       cost: Number(cost) || 0,
@@ -175,17 +178,10 @@ export function LegFormScreen({ tripId, legId, onSaved, onCancel }: Props) {
 
       <View style={styles.row}>
         <View style={styles.half}>
-          <Text style={styles.label}>Start time (ISO)</Text>
-          <TextInput
-            style={styles.input}
-            value={startTime}
-            onChangeText={setStartTime}
-            placeholder="2027-06-01T14:00"
-          />
+          <DateTimeField label="Start time" mode="datetime" value={startTime} onChange={setStartTime} />
         </View>
         <View style={styles.half}>
-          <Text style={styles.label}>End time (ISO)</Text>
-          <TextInput style={styles.input} value={endTime} onChangeText={setEndTime} placeholder="2027-06-01T20:00" />
+          <DateTimeField label="End time" mode="datetime" value={endTime} onChange={setEndTime} />
         </View>
       </View>
 
@@ -201,16 +197,26 @@ export function LegFormScreen({ tripId, legId, onSaved, onCancel }: Props) {
       </View>
 
       <Text style={styles.sectionTitle}>Details</Text>
-      {DETAIL_FIELDS[type].map((field) => (
-        <View key={field.key}>
-          <Text style={styles.label}>{field.label}</Text>
-          <TextInput
-            style={styles.input}
-            value={details[field.key] ?? ''}
-            onChangeText={(value) => setDetails((current) => ({ ...current, [field.key]: value }))}
+      {DETAIL_FIELDS[type].map((field) =>
+        field.type === 'datetime' ? (
+          <DateTimeField
+            key={field.key}
+            label={field.label}
+            mode="datetime"
+            value={details[field.key] ?? null}
+            onChange={(value) => setDetails((current) => ({ ...current, [field.key]: value ?? '' }))}
           />
-        </View>
-      ))}
+        ) : (
+          <View key={field.key}>
+            <Text style={styles.label}>{field.label}</Text>
+            <TextInput
+              style={styles.input}
+              value={details[field.key] ?? ''}
+              onChangeText={(value) => setDetails((current) => ({ ...current, [field.key]: value }))}
+            />
+          </View>
+        )
+      )}
 
       {travelers.length > 0 ? (
         <>
