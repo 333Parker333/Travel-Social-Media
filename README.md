@@ -151,9 +151,66 @@ npm run typecheck
 
 These also run in CI on every push/PR to `main`.
 
+## Deployment
+
+### Web (GitHub Pages, automatic)
+
+`.github/workflows/deploy-web.yml` builds and deploys the web app to
+GitHub Pages on every push to `main` — fully automatic from that point
+on. Two one-time steps only you can do (no API exists for either, so
+this can't be automated further):
+
+1. **Add two repository secrets** — Settings → Secrets and variables →
+   Actions → New repository secret:
+   - `EXPO_PUBLIC_SUPABASE_URL`
+   - `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+
+   (Same values as your local `.env`.) Without these the deployed site
+   will build successfully but show "Supabase not configured" - build
+   success doesn't mean the app is actually functional.
+
+2. **Enable Pages** — Settings → Pages → Source: **GitHub Actions**.
+
+After both, push to `main` (or re-run the workflow) and the site goes
+live at `https://<your-github-username>.github.io/Travel-Social-Media/`.
+The workflow sets `WEB_BASE_PATH` so asset URLs resolve correctly at
+that subpath (see `app.config.js`) and writes a `.nojekyll` file into
+the build output — without it, GitHub Pages' default Jekyll processing
+silently drops the `_expo/` asset folder (leading underscore) and every
+asset 404s.
+
+### Phone (Android sideload now; app stores later)
+
+`eas.json` is configured with a `preview` profile that builds a
+directly-installable Android APK — no Play Store account needed, just
+an EAS account (free) that has to be **yours**, not something I can
+create on your behalf:
+
+```bash
+npm install -g eas-cli
+eas login                                    # creates/logs into your Expo account
+eas build:configure                          # links this project to your EAS account
+eas build --profile preview --platform android
+```
+
+The last command builds in Expo's cloud and gives you a download link
+for an APK you can install directly on an Android phone (enable
+"install unknown apps" for your browser/file manager first).
+
+iOS has no equivalent shortcut - Apple requires a paid Apple Developer
+Program membership ($99/year, tied to your identity) for any real
+device install, even for internal testing via TestFlight. Same for
+publishing to the Play Store, which needs a Google Play Developer
+account ($25 one-time). These aren't things I can create for you; once
+you have either, `eas build --profile production --platform ios` (or
+`android`) plus `eas submit` handles the rest.
+
 ## Project structure
 
 ```
+app.config.js                        # dynamic config - conditional web base path for GitHub Pages
+eas.json                             # EAS Build profiles (preview = installable Android APK)
+.github/workflows/deploy-web.yml     # auto-builds + deploys web to GitHub Pages on push to main
 App.tsx                              # entry point, auth-gated routing
 src/components/DateTimeField.tsx     # cross-platform native date/time picker field (incl. web <input>)
 src/components/ComboBoxField.tsx     # preset dropdown + custom text entry ("Other")

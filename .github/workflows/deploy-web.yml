@@ -1,0 +1,60 @@
+name: Deploy web
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Export static web build
+        env:
+          # Project (not user/org) GitHub Pages sites are served at
+          # /<repo-name>/, not the domain root, so asset URLs need this
+          # prefix. Unset locally - `npm run web` serves from root.
+          WEB_BASE_PATH: /${{ github.event.repository.name }}
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+        run: npx expo export --platform web --output-dir dist
+
+      - name: Disable Jekyll processing
+        # Without this, GitHub Pages' default Jekyll build silently drops
+        # any file/folder starting with "_" - which is exactly what
+        # Expo's web export uses (_expo/static/...), breaking every
+        # asset URL with a 404.
+        run: touch dist/.nojekyll
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@v4
+        id: deployment
