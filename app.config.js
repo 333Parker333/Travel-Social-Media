@@ -24,7 +24,6 @@ const config = {
           cameraPermission: 'Allow Trip Deck to use the camera so you can photograph booking confirmations.',
         },
       ],
-      'expo-status-bar',
     ],
   },
 };
